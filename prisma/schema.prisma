@@ -12,13 +12,29 @@ datasource db {
   provider = "postgresql"
 }
 
+enum ReviewSource {
+  GOOGLE
+  TRIPADVISOR
+}
+
 model Hotel {
-  id            Int      @id @default(autoincrement())
-  name          String
-  googleMapsUrl String
-  notes         String?
-  rating        Float?
-  reviewsCount  Int?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id        Int      @id @default(autoincrement())
+  name      String
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ratings   Rating[]
+}
+
+model Rating {
+  id           Int          @id @default(autoincrement())
+  hotelId      Int
+  hotel        Hotel        @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  source       ReviewSource
+  url          String
+  rating       Float?
+  reviewsCount Int?
+  updatedAt    DateTime     @updatedAt
+
+  @@unique([hotelId, source])
 }

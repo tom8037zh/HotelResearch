@@ -8,12 +8,15 @@ export default async function EditHotelPage({ params }: { params: Promise<{ id: 
   const { id } = await params;
   const hotelId = Number(id);
   const hotel = Number.isFinite(hotelId)
-    ? await prisma.hotel.findUnique({ where: { id: hotelId } })
+    ? await prisma.hotel.findUnique({ where: { id: hotelId }, include: { ratings: true } })
     : null;
 
   if (!hotel) {
     notFound();
   }
+
+  const googleMapsUrl = hotel.ratings.find((r) => r.source === "GOOGLE")?.url ?? "";
+  const tripadvisorUrl = hotel.ratings.find((r) => r.source === "TRIPADVISOR")?.url ?? "";
 
   return (
     <div className="min-h-screen bg-zinc-50 px-6 py-12 font-sans dark:bg-black">
@@ -29,7 +32,8 @@ export default async function EditHotelPage({ params }: { params: Promise<{ id: 
           action={updateHotel.bind(null, hotel.id)}
           defaultValues={{
             name: hotel.name,
-            googleMapsUrl: hotel.googleMapsUrl,
+            googleMapsUrl,
+            tripadvisorUrl,
             notes: hotel.notes ?? "",
           }}
           submitLabel="Speichern"

@@ -4,8 +4,38 @@ import { DeleteButton } from "./hotels/DeleteButton";
 
 export const dynamic = "force-dynamic";
 
+function RatingLine({
+  label,
+  rating,
+}: {
+  label: string;
+  rating: { url: string; rating: number | null; reviewsCount: number | null } | undefined;
+}) {
+  if (!rating) return null;
+
+  return (
+    <p className="text-sm text-zinc-600 dark:text-zinc-400">
+      <a
+        href={rating.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="font-medium underline"
+      >
+        {label}
+      </a>
+      :{" "}
+      {rating.rating !== null
+        ? `★ ${rating.rating} (${rating.reviewsCount ?? 0} Bewertungen)`
+        : "kein Rating"}
+    </p>
+  );
+}
+
 export default async function Home() {
-  const hotels = await prisma.hotel.findMany({ orderBy: { createdAt: "desc" } });
+  const hotels = await prisma.hotel.findMany({
+    orderBy: { createdAt: "desc" },
+    include: { ratings: true },
+  });
 
   return (
     <div className="min-h-screen bg-zinc-50 px-6 py-12 font-sans dark:bg-black">
@@ -32,11 +62,14 @@ export default async function Home() {
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="font-medium text-black dark:text-zinc-50">{hotel.name}</p>
-                    <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                      {hotel.rating !== null
-                        ? `★ ${hotel.rating} (${hotel.reviewsCount ?? 0} Bewertungen)`
-                        : "kein Rating"}
-                    </p>
+                    <RatingLine
+                      label="Google"
+                      rating={hotel.ratings.find((r) => r.source === "GOOGLE")}
+                    />
+                    <RatingLine
+                      label="TripAdvisor"
+                      rating={hotel.ratings.find((r) => r.source === "TRIPADVISOR")}
+                    />
                     {hotel.notes && (
                       <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-500">{hotel.notes}</p>
                     )}

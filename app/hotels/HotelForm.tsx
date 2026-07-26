@@ -5,7 +5,7 @@ import type { HotelFormState } from "./actions";
 
 interface HotelFormProps {
   action: (prevState: HotelFormState, formData: FormData) => Promise<HotelFormState>;
-  defaultValues?: { name: string; googleMapsUrl: string; notes: string };
+  defaultValues?: { name: string; googleMapsUrl: string; tripadvisorUrl: string; notes: string };
   submitLabel: string;
 }
 
@@ -41,6 +41,23 @@ export function HotelForm({ action, defaultValues, submitLabel }: HotelFormProps
           required
           defaultValue={defaultValues?.googleMapsUrl}
           placeholder="https://www.google.com/maps/place/..."
+          className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-black dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+        />
+      </div>
+
+      <div>
+        <label
+          className="mb-1 block text-sm font-medium text-black dark:text-zinc-50"
+          htmlFor="tripadvisorUrl"
+        >
+          Link zu TripAdvisor (optional)
+        </label>
+        <input
+          id="tripadvisorUrl"
+          name="tripadvisorUrl"
+          type="url"
+          defaultValue={defaultValues?.tripadvisorUrl}
+          placeholder="https://www.tripadvisor.com/Hotel_Review-..."
           className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-black dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
         />
       </div>
