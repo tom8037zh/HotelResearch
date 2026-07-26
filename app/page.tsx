@@ -2,6 +2,8 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { DeleteButton } from "./hotels/DeleteButton";
 
+export const dynamic = "force-dynamic";
+
 export default async function Home() {
   const hotels = await prisma.hotel.findMany({ orderBy: { createdAt: "desc" } });
 
