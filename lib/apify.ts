@@ -140,3 +140,67 @@ export async function fetchTripAdvisorRating(url: string): Promise<PlaceRating |
     return null;
   }
 }
+
+interface ApifyBookingResult {
+  name?: string;
+  rating?: number;
+  reviews?: number;
+}
+
+export function isBookingUrl(url: string): boolean {
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(url);
+  } catch {
+    return false;
+  }
+  return parsedUrl.hostname.includes("booking.com");
+}
+
+/**
+ * Ruft Name/Rating (10er-Skala)/Anzahl Bewertungen für einen Booking.com-Link über Apify ab.
+ * Gibt bei jedem Fehler (Netzwerk, Apify-Fehler, kein Ort gefunden) null zurück statt zu werfen,
+ * damit Aufrufer selbst entscheiden können, ob trotzdem gespeichert wird.
+ */
+export async function fetchBookingRating(url: string): Promise<PlaceRating | null> {
+  const apiToken = process.env.APIFY_API_TOKEN;
+  if (!apiToken) {
+    console.error("APIFY_API_TOKEN fehlt in der Umgebung.");
+    return null;
+  }
+
+  try {
+    const apifyRes = await fetch("https://api.apify.com/v2/acts/voyager~booking-scraper/run-sync-get-dataset-items", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        startUrls: [{ url }],
+        maxItems: 1,
+      }),
+    });
+
+    if (!apifyRes.ok) {
+      console.error("Apify request failed:", apifyRes.status, await apifyRes.text());
+      return null;
+    }
+
+    const results: ApifyBookingResult[] = await apifyRes.json();
+    const place = Array.isArray(results) ? results[0] : undefined;
+
+    if (!place || !place.name) {
+      return null;
+    }
+
+    return {
+      name: place.name,
+      rating: place.rating ?? null,
+      reviewsCount: place.reviews ?? null,
+    };
+  } catch (err) {
+    console.error("Apify request failed:", err);
+    return null;
+  }
+}

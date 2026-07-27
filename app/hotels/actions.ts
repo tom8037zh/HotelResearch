@@ -4,8 +4,10 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import {
+  fetchBookingRating,
   fetchGoogleMapsRating,
   fetchTripAdvisorRating,
+  isBookingUrl,
   isGoogleMapsUrl,
   isTripAdvisorUrl,
 } from "@/lib/apify";
@@ -19,6 +21,7 @@ function readHotelForm(formData: FormData) {
     name: String(formData.get("name") ?? "").trim(),
     googleMapsUrl: String(formData.get("googleMapsUrl") ?? "").trim(),
     tripadvisorUrl: String(formData.get("tripadvisorUrl") ?? "").trim(),
+    bookingUrl: String(formData.get("bookingUrl") ?? "").trim(),
     notes: String(formData.get("notes") ?? "").trim(),
   };
 }
@@ -27,7 +30,7 @@ export async function createHotel(
   _prevState: HotelFormState,
   formData: FormData
 ): Promise<HotelFormState> {
-  const { name, googleMapsUrl, tripadvisorUrl, notes } = readHotelForm(formData);
+  const { name, googleMapsUrl, tripadvisorUrl, bookingUrl, notes } = readHotelForm(formData);
 
   if (!name) {
     return { error: "Bitte einen Hotelnamen angeben." };
@@ -38,10 +41,14 @@ export async function createHotel(
   if (tripadvisorUrl && !isTripAdvisorUrl(tripadvisorUrl)) {
     return { error: "Bitte einen gültigen TripAdvisor-Link angeben." };
   }
+  if (bookingUrl && !isBookingUrl(bookingUrl)) {
+    return { error: "Bitte einen gültigen Booking.com-Link angeben." };
+  }
 
-  const [googleRating, tripadvisorRating] = await Promise.all([
+  const [googleRating, tripadvisorRating, bookingRating] = await Promise.all([
     fetchGoogleMapsRating(googleMapsUrl),
     tripadvisorUrl ? fetchTripAdvisorRating(tripadvisorUrl) : Promise.resolve(null),
+    bookingUrl ? fetchBookingRating(bookingUrl) : Promise.resolve(null),
   ]);
 
   await prisma.hotel.create({
@@ -66,6 +73,16 @@ export async function createHotel(
                 },
               ]
             : []),
+          ...(bookingUrl
+            ? [
+                {
+                  source: "BOOKING" as const,
+                  url: bookingUrl,
+                  rating: bookingRating?.rating ?? null,
+                  reviewsCount: bookingRating?.reviewsCount ?? null,
+                },
+              ]
+            : []),
         ],
       },
     },
@@ -80,7 +97,7 @@ export async function updateHotel(
   _prevState: HotelFormState,
   formData: FormData
 ): Promise<HotelFormState> {
-  const { name, googleMapsUrl, tripadvisorUrl, notes } = readHotelForm(formData);
+  const { name, googleMapsUrl, tripadvisorUrl, bookingUrl, notes } = readHotelForm(formData);
 
   if (!name) {
     return { error: "Bitte einen Hotelnamen angeben." };
@@ -91,6 +108,9 @@ export async function updateHotel(
   if (tripadvisorUrl && !isTripAdvisorUrl(tripadvisorUrl)) {
     return { error: "Bitte einen gültigen TripAdvisor-Link angeben." };
   }
+  if (bookingUrl && !isBookingUrl(bookingUrl)) {
+    return { error: "Bitte einen gültigen Booking.com-Link angeben." };
+  }
 
   const existing = await prisma.hotel.findUnique({ where: { id }, include: { ratings: true } });
   if (!existing) {
@@ -99,13 +119,16 @@ export async function updateHotel(
 
   const existingGoogle = existing.ratings.find((r) => r.source === "GOOGLE");
   const existingTripAdvisor = existing.ratings.find((r) => r.source === "TRIPADVISOR");
+  const existingBooking = existing.ratings.find((r) => r.source === "BOOKING");
 
   const googleChanged = googleMapsUrl !== existingGoogle?.url;
   const tripadvisorChanged = tripadvisorUrl !== (existingTripAdvisor?.url ?? "");
+  const bookingChanged = bookingUrl !== (existingBooking?.url ?? "");
 
-  const [googleFetched, tripadvisorFetched] = await Promise.all([
+  const [googleFetched, tripadvisorFetched, bookingFetched] = await Promise.all([
     googleChanged ? fetchGoogleMapsRating(googleMapsUrl) : null,
     tripadvisorChanged && tripadvisorUrl ? fetchTripAdvisorRating(tripadvisorUrl) : null,
+    bookingChanged && bookingUrl ? fetchBookingRating(bookingUrl) : null,
   ]);
 
   await prisma.$transaction(async (tx) => {
@@ -150,6 +173,30 @@ export async function updateHotel(
     } else if (existingTripAdvisor) {
       await tx.rating.delete({
         where: { hotelId_source: { hotelId: id, source: "TRIPADVISOR" } },
+      });
+    }
+
+    if (bookingUrl) {
+      if (bookingChanged) {
+        await tx.rating.upsert({
+          where: { hotelId_source: { hotelId: id, source: "BOOKING" } },
+          create: {
+            hotelId: id,
+            source: "BOOKING",
+            url: bookingUrl,
+            rating: bookingFetched?.rating ?? null,
+            reviewsCount: bookingFetched?.reviewsCount ?? null,
+          },
+          update: {
+            url: bookingUrl,
+            rating: bookingFetched?.rating ?? null,
+            reviewsCount: bookingFetched?.reviewsCount ?? null,
+          },
+        });
+      }
+    } else if (existingBooking) {
+      await tx.rating.delete({
+        where: { hotelId_source: { hotelId: id, source: "BOOKING" } },
       });
     }
   });

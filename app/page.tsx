@@ -7,11 +7,20 @@ export const dynamic = "force-dynamic";
 function RatingLine({
   label,
   rating,
+  scale = 5,
 }: {
   label: string;
   rating: { url: string; rating: number | null; reviewsCount: number | null } | undefined;
+  scale?: 5 | 10;
 }) {
   if (!rating) return null;
+
+  const ratingText =
+    rating.rating === null
+      ? "kein Rating"
+      : scale === 10
+        ? `${rating.rating}/10 (${rating.reviewsCount ?? 0} Bewertungen)`
+        : `★ ${rating.rating} (${rating.reviewsCount ?? 0} Bewertungen)`;
 
   return (
     <p className="text-sm text-zinc-600 dark:text-zinc-400">
@@ -23,10 +32,7 @@ function RatingLine({
       >
         {label}
       </a>
-      :{" "}
-      {rating.rating !== null
-        ? `★ ${rating.rating} (${rating.reviewsCount ?? 0} Bewertungen)`
-        : "kein Rating"}
+      : {ratingText}
     </p>
   );
 }
@@ -69,6 +75,11 @@ export default async function Home() {
                     <RatingLine
                       label="TripAdvisor"
                       rating={hotel.ratings.find((r) => r.source === "TRIPADVISOR")}
+                    />
+                    <RatingLine
+                      label="Booking.com"
+                      rating={hotel.ratings.find((r) => r.source === "BOOKING")}
+                      scale={10}
                     />
                     {hotel.notes && (
                       <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-500">{hotel.notes}</p>

@@ -15,6 +15,7 @@ datasource db {
 enum ReviewSource {
   GOOGLE
   TRIPADVISOR
+  BOOKING
 }
 
 model Hotel {

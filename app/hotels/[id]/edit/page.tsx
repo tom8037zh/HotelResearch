@@ -17,6 +17,7 @@ export default async function EditHotelPage({ params }: { params: Promise<{ id: 
 
   const googleMapsUrl = hotel.ratings.find((r) => r.source === "GOOGLE")?.url ?? "";
   const tripadvisorUrl = hotel.ratings.find((r) => r.source === "TRIPADVISOR")?.url ?? "";
+  const bookingUrl = hotel.ratings.find((r) => r.source === "BOOKING")?.url ?? "";
 
   return (
     <div className="min-h-screen bg-zinc-50 px-6 py-12 font-sans dark:bg-black">
@@ -34,6 +35,7 @@ export default async function EditHotelPage({ params }: { params: Promise<{ id: 
             name: hotel.name,
             googleMapsUrl,
             tripadvisorUrl,
+            bookingUrl,
             notes: hotel.notes ?? "",
           }}
           submitLabel="Speichern"
