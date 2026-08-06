@@ -18,8 +18,18 @@ enum ReviewSource {
   BOOKING
 }
 
+model Trip {
+  id        Int      @id @default(autoincrement())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  hotels    Hotel[]
+}
+
 model Hotel {
   id        Int      @id @default(autoincrement())
+  tripId    Int
+  trip      Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
   name      String
   notes     String?
   createdAt DateTime @default(now())

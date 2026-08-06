@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { createHotel } from "../actions";
-import { HotelForm } from "../HotelForm";
+import { createTrip } from "../actions";
+import { TripForm } from "../TripForm";
 
-export default function NewHotelPage() {
+export default function NewTripPage() {
   return (
     <div className="min-h-screen bg-zinc-50 px-6 py-12 font-sans dark:bg-black">
       <main className="mx-auto max-w-xl">
@@ -12,8 +12,8 @@ export default function NewHotelPage() {
         >
           ← Zurück
         </Link>
-        <h1 className="mb-6 text-2xl font-semibold text-black dark:text-zinc-50">Neues Hotel</h1>
-        <HotelForm action={createHotel} submitLabel="Speichern" />
+        <h1 className="mb-6 text-2xl font-semibold text-black dark:text-zinc-50">Neue Reise</h1>
+        <TripForm action={createTrip} submitLabel="Speichern" />
       </main>
     </div>
   );

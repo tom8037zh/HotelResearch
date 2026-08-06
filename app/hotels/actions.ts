@@ -27,6 +27,7 @@ function readHotelForm(formData: FormData) {
 }
 
 export async function createHotel(
+  tripId: number,
   _prevState: HotelFormState,
   formData: FormData
 ): Promise<HotelFormState> {
@@ -53,6 +54,7 @@ export async function createHotel(
 
   await prisma.hotel.create({
     data: {
+      tripId,
       name,
       notes: notes || null,
       ratings: {
@@ -89,7 +91,8 @@ export async function createHotel(
   });
 
   revalidatePath("/");
-  redirect("/");
+  revalidatePath(`/trips/${tripId}`);
+  redirect(`/trips/${tripId}`);
 }
 
 export async function updateHotel(
@@ -202,10 +205,16 @@ export async function updateHotel(
   });
 
   revalidatePath("/");
-  redirect("/");
+  revalidatePath(`/trips/${existing.tripId}`);
+  redirect(`/trips/${existing.tripId}`);
 }
 
 export async function deleteHotel(id: number): Promise<void> {
+  const existing = await prisma.hotel.findUnique({ where: { id } });
+  if (!existing) return;
+
   await prisma.hotel.delete({ where: { id } });
+
   revalidatePath("/");
+  revalidatePath(`/trips/${existing.tripId}`);
 }

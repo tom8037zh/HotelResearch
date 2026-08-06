@@ -1,13 +1,17 @@
 "use client";
 
-import { deleteHotel } from "./actions";
-
-export function DeleteButton({ id, hotelName }: { id: number; hotelName: string }) {
+export function ConfirmDeleteButton({
+  action,
+  confirmMessage,
+}: {
+  action: () => Promise<void>;
+  confirmMessage: string;
+}) {
   return (
     <form
-      action={deleteHotel.bind(null, id)}
+      action={action}
       onSubmit={(e) => {
-        if (!confirm(`"${hotelName}" wirklich löschen?`)) {
+        if (!confirm(confirmMessage)) {
           e.preventDefault();
         }
       }}
