@@ -57,6 +57,8 @@ export async function createHotel(
       tripId,
       name,
       notes: notes || null,
+      latitude: googleRating?.latitude ?? null,
+      longitude: googleRating?.longitude ?? null,
       ratings: {
         create: [
           {
@@ -135,7 +137,19 @@ export async function updateHotel(
   ]);
 
   await prisma.$transaction(async (tx) => {
-    await tx.hotel.update({ where: { id }, data: { name, notes: notes || null } });
+    await tx.hotel.update({
+      where: { id },
+      data: {
+        name,
+        notes: notes || null,
+        ...(googleChanged
+          ? {
+              latitude: googleFetched?.latitude ?? null,
+              longitude: googleFetched?.longitude ?? null,
+            }
+          : {}),
+      },
+    });
 
     if (googleChanged) {
       await tx.rating.upsert({

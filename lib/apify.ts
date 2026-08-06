@@ -2,12 +2,15 @@ export interface PlaceRating {
   name: string;
   rating: number | null;
   reviewsCount: number | null;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 interface ApifyPlaceResult {
   title?: string;
   totalScore?: number;
   reviewsCount?: number;
+  location?: { lat?: number; lng?: number };
 }
 
 export function isGoogleMapsUrl(url: string): boolean {
@@ -70,6 +73,8 @@ export async function fetchGoogleMapsRating(url: string): Promise<PlaceRating | 
       name: place.title,
       rating: place.totalScore ?? null,
       reviewsCount: place.reviewsCount ?? null,
+      latitude: place.location?.lat ?? null,
+      longitude: place.location?.lng ?? null,
     };
   } catch (err) {
     console.error("Apify request failed:", err);
