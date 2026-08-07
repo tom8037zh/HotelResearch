@@ -1,63 +1,57 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { ConfirmDeleteButton } from "@/app/components/ConfirmDeleteButton";
-import { deleteTrip } from "@/app/trips/actions";
+import { TripCard } from "@/app/trips/TripCard";
+import { formatDateRange } from "@/lib/formatDateRange";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
+  // coverPhoto (Bytes) bewusst nicht mitselektieren, sonst würden hier alle Titelbilder komplett
+  // übertragen nur um sie anzuzeigen - stattdessen den (leichtgewichtigen) coverPhotoType als
+  // "hat Foto?"-Indikator nutzen, die eigentlichen Bytes kommen über die Foto-Route.
   const trips = await prisma.trip.findMany({
     orderBy: { createdAt: "desc" },
-    include: { _count: { select: { hotels: true } } },
+    select: {
+      id: true,
+      name: true,
+      startDate: true,
+      endDate: true,
+      coverPhotoType: true,
+      updatedAt: true,
+      _count: { select: { hotels: true } },
+    },
   });
 
   return (
-    <div className="min-h-screen bg-zinc-50 px-6 py-12 font-sans dark:bg-black">
-      <main className="mx-auto max-w-2xl">
+    <div className="min-h-screen bg-page px-8 py-10 font-sans text-text-primary">
+      <main className="mx-auto max-w-[1240px]">
         <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-semibold text-black dark:text-zinc-50">Reisen</h1>
+          <h1 className="text-2xl font-semibold text-text-primary">Reisen</h1>
           <Link
             href="/trips/new"
-            className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white dark:bg-white dark:text-black"
+            className="rounded-lg bg-text-primary px-[18px] py-2.5 text-sm font-medium text-white"
           >
             + Neue Reise
           </Link>
         </div>
 
         {trips.length === 0 ? (
-          <p className="text-zinc-600 dark:text-zinc-400">Noch keine Reisen angelegt.</p>
+          <p className="text-text-secondary">Noch keine Reisen angelegt.</p>
         ) : (
-          <ul className="flex flex-col gap-3">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4">
             {trips.map((trip) => (
-              <li
+              <TripCard
                 key={trip.id}
-                className="rounded-md border border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <Link href={`/trips/${trip.id}`} className="flex-1">
-                    <p className="font-medium text-black hover:underline dark:text-zinc-50">
-                      {trip.name}
-                    </p>
-                    <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                      {trip._count.hotels} {trip._count.hotels === 1 ? "Hotel" : "Hotels"}
-                    </p>
-                  </Link>
-                  <div className="flex shrink-0 gap-3">
-                    <Link
-                      href={`/trips/${trip.id}/edit`}
-                      className="text-sm text-zinc-700 hover:underline dark:text-zinc-300"
-                    >
-                      Bearbeiten
-                    </Link>
-                    <ConfirmDeleteButton
-                      action={deleteTrip.bind(null, trip.id)}
-                      confirmMessage={`"${trip.name}" wirklich löschen? Damit werden auch alle ${trip._count.hotels} zugehörigen Hotels (inkl. Bewertungen) unwiderruflich gelöscht.`}
-                    />
-                  </div>
-                </div>
-              </li>
+                trip={{
+                  id: trip.id,
+                  name: trip.name,
+                  hotelCount: trip._count.hotels,
+                  photoVersion: trip.coverPhotoType !== null ? trip.updatedAt.getTime() : null,
+                  dateRangeLabel: formatDateRange(trip.startDate, trip.endDate),
+                }}
+              />
             ))}
-          </ul>
+          </div>
         )}
       </main>
     </div>

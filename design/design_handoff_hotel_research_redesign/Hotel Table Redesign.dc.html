@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+
+<helmet>
+<script src="./image-slot.js"></script>
+<style>
+  body { margin: 0; }
+  ::selection { background: #d4d4d8; }
+</style>
+</helmet>
+<div style="min-height:100vh; background:#f4f4f5; padding:40px 32px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; color:#18181b;">
+  <div style="max-width:1240px; margin:0 auto;">
+
+    <a href="#" style="font-size:13px; color:#71717a; text-decoration:none; display:inline-block; margin-bottom:16px;">← Alle Reisen</a>
+
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px;">
+      <div>
+        <h1 style="font-size:24px; font-weight:600; margin:0 0 4px 0; color:#18181b;">Griechenland Sommer 2026</h1>
+        <p style="font-size:13px; color:#71717a; margin:0;">{{ hotelCount }} Hotels</p>
+      </div>
+      <button style="background:#18181b; color:#fff; border:none; border-radius:8px; padding:10px 18px; font-size:14px; font-weight:500; cursor:pointer;">+ Neues Hotel</button>
+    </div>
+
+    <div style="background:#fff; border:1px solid #e4e4e7; border-radius:14px; overflow:hidden; box-shadow:0 1px 2px rgba(0,0,0,0.03);">
+      <div style="overflow-x:auto;">
+      <div style="min-width:920px; font-size:14px;">
+        <div style="display:grid; grid-template-columns:1.6fr 1.1fr 1.1fr 1.1fr 1.4fr 110px; align-items:center; background:#fafafa;">
+          <div onClick="{{ sortByName }}" style="padding:14px 20px; font-weight:500; color:#71717a; cursor:pointer; user-select:none;">
+            Hotel <span style="font-size:10px; margin-left:4px; color:#a1a1aa;">{{ nameArrow }}</span>
+          </div>
+          <div onClick="{{ sortByGoogle }}" style="padding:14px 12px; font-weight:500; color:#71717a; cursor:pointer; user-select:none;">
+            Google <span style="font-size:10px; margin-left:4px; color:#a1a1aa;">{{ googleArrow }}</span>
+          </div>
+          <div onClick="{{ sortByTripadvisor }}" style="padding:14px 12px; font-weight:500; color:#71717a; cursor:pointer; user-select:none;">
+            TripAdvisor <span style="font-size:10px; margin-left:4px; color:#a1a1aa;">{{ tripadvisorArrow }}</span>
+          </div>
+          <div onClick="{{ sortByBooking }}" style="padding:14px 12px; font-weight:500; color:#71717a; cursor:pointer; user-select:none;">
+            Booking.com <span style="font-size:10px; margin-left:4px; color:#a1a1aa;">{{ bookingArrow }}</span>
+          </div>
+          <div style="padding:14px 12px; font-weight:500; color:#71717a;">Notizen</div>
+          <div style="padding:14px 20px 14px 12px; text-align:right; font-weight:500; color:#71717a;">Aktionen</div>
+        </div>
+        <sc-for list="{{ hotels }}" as="hotel" hint-placeholder-count="6">
+          <div onClick="{{ hotel.selectRow }}" style="{{ hotel.rowStyle }} display:grid; grid-template-columns:1.6fr 1.1fr 1.1fr 1.1fr 1.4fr 110px; align-items:center;">
+            <div style="padding:16px 12px 16px 20px; display:flex; align-items:center; gap:10px;">
+              <div style="width:72px; height:72px; flex-shrink:0;">
+                <image-slot id="{{ hotel.imageSlotId }}" shape="rounded" radius="10" placeholder="Foto"></image-slot>
+              </div>
+              <span style="font-weight:500; color:#18181b;">{{ hotel.name }}</span>
+            </div>
+            <div style="padding:16px 12px;">
+              <span style="display:inline-block; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:500; background:{{ hotel.google.bg }}; color:{{ hotel.google.color }};">{{ hotel.google.text }}</span>
+            </div>
+            <div style="padding:16px 12px;">
+              <span style="display:inline-block; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:500; background:{{ hotel.tripadvisor.bg }}; color:{{ hotel.tripadvisor.color }};">{{ hotel.tripadvisor.text }}</span>
+            </div>
+            <div style="padding:16px 12px;">
+              <span style="display:inline-block; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:500; background:{{ hotel.booking.bg }}; color:{{ hotel.booking.color }};">{{ hotel.booking.text }}</span>
+            </div>
+            <div style="padding:16px 12px; color:#71717a; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ hotel.notes }}</div>
+            <div style="padding:16px 20px 16px 12px; display:flex; gap:10px; justify-content:flex-end; align-items:center;">
+              <span style="cursor:pointer;" title="Bearbeiten">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#52525b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+              </span>
+              <span style="cursor:pointer;" title="Löschen">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+              </span>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+      </div>
+    </div>
+
+    <sc-if value="{{ showMap }}" hint-placeholder-val="{{ true }}">
+      <div style="margin-top:24px; background:#fff; border:1px solid #e4e4e7; border-radius:14px; padding:16px;">
+        <p style="font-size:13px; font-weight:500; color:#71717a; margin:0 0 12px 0;">Standorte</p>
+        <div style="position:relative; height:220px; border-radius:10px; background:#f0f0f1; background-image:radial-gradient(#d4d4d8 1px, transparent 1px); background-size:16px 16px; overflow:hidden;">
+          <sc-for list="{{ hotels }}" as="hotel" hint-placeholder-count="6">
+            <div style="position:absolute; left:{{ hotel.mapX }}%; top:{{ hotel.mapY }}%; transform:translate(-50%,-100%); opacity:{{ hotel.pinOpacity }}; z-index:{{ hotel.pinZ }}; text-align:center; display:flex; flex-direction:column; align-items:center; gap:4px; transition:opacity .15s;">
+              <span style="background:{{ hotel.labelBg }}; border:{{ hotel.labelBorder }}; border-radius:6px; padding:2px 8px; font-size:11px; font-weight:500; color:{{ hotel.labelColor }}; white-space:nowrap; box-shadow:0 1px 3px rgba(0,0,0,0.08);">{{ hotel.name }}</span>
+              <svg width="22" height="28" viewBox="0 0 24 32" style="flex-shrink:0; filter:drop-shadow(0 1px 2px rgba(0,0,0,0.25));">
+                <path d="M12 0C5.37 0 0 5.37 0 12c0 8.5 12 20 12 20s12-11.5 12-20C24 5.37 18.63 0 12 0Z" fill="#18181b"/>
+                <circle cx="12" cy="12" r="5" fill="#fff"/>
+              </svg>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showMap&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;}}">
+class Component extends DCLogic {
+  state = { sortDesc: false, sortColumn: "name", selectedHotelId: null };
+
+  rawHotels() {
+    return [
+      { id: 1, name: "Hotel Schweizerhof", google: 4.6, googleReviews: 1204, tripadvisor: 4.5, tripadvisorReviews: 892, booking: 8.9, bookingReviews: 410, notes: "Nahe Zentrum, Frühstück top", mapX: 30, mapY: 40 },
+      { id: 2, name: "Baur au Lac", google: 4.8, googleReviews: 2310, tripadvisor: null, tripadvisorReviews: null, booking: 9.4, bookingReviews: 88, notes: "TripAdvisor blockiert (403)", mapX: 55, mapY: 25 },
+      { id: 3, name: "25hours Hotel", google: 4.2, googleReviews: 640, tripadvisor: 4.0, tripadvisorReviews: 301, booking: 8.1, bookingReviews: 512, notes: "Gute Lage für Nightlife", mapX: 70, mapY: 60 },
+      { id: 4, name: "Widder Hotel", google: 4.7, googleReviews: 980, tripadvisor: 4.6, tripadvisorReviews: 455, booking: 9.2, bookingReviews: 201, notes: "", mapX: 45, mapY: 75 },
+      { id: 5, name: "Marktgasse Hotel", google: 3.9, googleReviews: 210, tripadvisor: 3.8, tripadvisorReviews: 140, booking: 7.4, bookingReviews: 95, notes: "Etwas laut zur Straße", mapX: 20, mapY: 65 },
+      { id: 6, name: "Sorell Hotel Rigi", google: 3.4, googleReviews: 88, tripadvisor: 3.2, tripadvisorReviews: 52, booking: 6.5, bookingReviews: 40, notes: "Preis-Leistung okay", mapX: 80, mapY: 35 },
+    ];
+  }
+
+  tier5(r) {
+    if (r === null || r === undefined) return { bg: "#f4f4f5", color: "#71717a" };
+    if (r >= 4.5) return { bg: "#ecfdf5", color: "#059669" };
+    if (r >= 4.0) return { bg: "#eff6ff", color: "#2563eb" };
+    if (r >= 3.0) return { bg: "#fff7ed", color: "#d97706" };
+    return { bg: "#fef2f2", color: "#dc2626" };
+  }
+
+  tier10(r) {
+    if (r === null || r === undefined) return { bg: "#f4f4f5", color: "#71717a" };
+    if (r >= 9) return { bg: "#ecfdf5", color: "#059669" };
+    if (r >= 8) return { bg: "#eff6ff", color: "#2563eb" };
+    if (r >= 6) return { bg: "#fff7ed", color: "#d97706" };
+    return { bg: "#fef2f2", color: "#dc2626" };
+  }
+
+  avatarColor(name) {
+    const colors = ["#52525b", "#3f6212", "#0e7490", "#7c3aed", "#b91c1c", "#c2410c"];
+    let sum = 0;
+    for (let i = 0; i < name.length; i++) sum += name.charCodeAt(i);
+    return colors[sum % colors.length];
+  }
+
+  sortByHandler = (column) => () =>
+    this.setState((s) => (s.sortColumn === column ? { sortDesc: !s.sortDesc } : { sortColumn: column, sortDesc: false }));
+
+  renderVals() {
+    let raw = [...this.rawHotels()];
+    const col = this.state.sortColumn;
+    const dir = this.state.sortDesc ? -1 : 1;
+    raw.sort((a, b) => {
+      if (col === "name") return a.name.localeCompare(b.name) * dir;
+      const av = a[col], bv = b[col];
+      if (av === null && bv === null) return 0;
+      if (av === null) return 1;
+      if (bv === null) return -1;
+      return (av - bv) * dir;
+    });
+
+    const hotels = raw.map((h, i) => ({
+      ...h,
+      initial: h.name.charAt(0),
+      avatarBg: this.avatarColor(h.name),
+      google: { text: h.google === null ? "Kein Rating" : `★ ${h.google} (${h.googleReviews})`, ...this.tier5(h.google) },
+      tripadvisor: { text: h.tripadvisor === null ? "Kein Rating" : `★ ${h.tripadvisor} (${h.tripadvisorReviews})`, ...this.tier5(h.tripadvisor) },
+      booking: { text: h.booking === null ? "Kein Rating" : `${h.booking}/10 (${h.bookingReviews})`, ...this.tier10(h.booking) },
+      notes: h.notes || "—",
+      imageSlotId: `hotel-photo-${h.id}`,
+      isSelected: this.state.selectedHotelId === h.id,
+      selectRow: () => this.setState((s) => ({ selectedHotelId: s.selectedHotelId === h.id ? null : h.id })),
+      pinOpacity: this.state.selectedHotelId === null || this.state.selectedHotelId === h.id ? 1 : 0.4,
+      pinZ: this.state.selectedHotelId === h.id ? 10 : 1,
+      labelBg: this.state.selectedHotelId === h.id ? "#18181b" : "#fff",
+      labelBorder: this.state.selectedHotelId === h.id ? "1px solid #18181b" : "1px solid #e4e4e7",
+      labelColor: this.state.selectedHotelId === h.id ? "#fff" : "#18181b",
+      ringR: 9,
+      ringOpacity: this.state.selectedHotelId === h.id ? 1 : 0,
+      rowStyle: `border-top: 1px solid #f0f0f1; cursor:pointer; background:${this.state.selectedHotelId === h.id ? "#f0f0f1" : "#fff"};`,
+    }));
+
+    return {
+      hotels,
+      hotelCount: hotels.length,
+      showMap: this.props.showMap ?? true,
+      sortArrowFor: (column) => (this.state.sortColumn === column ? (this.state.sortDesc ? "▼" : "▲") : ""),
+      sortByName: this.sortByHandler("name"),
+      sortByGoogle: this.sortByHandler("google"),
+      sortByTripadvisor: this.sortByHandler("tripadvisor"),
+      sortByBooking: this.sortByHandler("booking"),
+      nameArrow: this.state.sortColumn === "name" ? (this.state.sortDesc ? "▼" : "▲") : "",
+      googleArrow: this.state.sortColumn === "google" ? (this.state.sortDesc ? "▼" : "▲") : "",
+      tripadvisorArrow: this.state.sortColumn === "tripadvisor" ? (this.state.sortDesc ? "▼" : "▲") : "",
+      bookingArrow: this.state.sortColumn === "booking" ? (this.state.sortDesc ? "▼" : "▲") : "",
+    };
+  }
+}
+</script>
+</body>
+</html>

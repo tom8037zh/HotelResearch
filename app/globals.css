@@ -12,6 +12,26 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* Design tokens for the admin-dashboard redesign (see design/design_handoff_hotel_research_redesign) */
+@theme {
+  --color-page: #f4f4f5;
+  --color-card-border: #e4e4e7;
+  --color-row-divider: #f0f0f1;
+  --color-text-primary: #18181b;
+  --color-text-secondary: #71717a;
+  --color-text-muted: #a1a1aa;
+  --color-tier-green-bg: #ecfdf5;
+  --color-tier-green: #059669;
+  --color-tier-blue-bg: #eff6ff;
+  --color-tier-blue: #2563eb;
+  --color-tier-amber-bg: #fff7ed;
+  --color-tier-amber: #d97706;
+  --color-tier-red-bg: #fef2f2;
+  --color-tier-red: #dc2626;
+  --color-tier-neutral-bg: #f4f4f5;
+  --color-tier-neutral: #71717a;
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
@@ -24,3 +44,9 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Hotel-Karten-Pins: sanfter Fade beim Wechsel der Auswahl, s. HotelsMap.tsx */
+.hotel-marker-icon {
+  transition: opacity 0.15s;
+}
+

@@ -15,7 +15,11 @@ export default async function EditHotelPage({
 
   const hotel =
     Number.isFinite(tripIdNum) && Number.isFinite(hotelIdNum)
-      ? await prisma.hotel.findUnique({ where: { id: hotelIdNum }, include: { ratings: true, trip: true } })
+      ? await prisma.hotel.findUnique({
+          where: { id: hotelIdNum },
+          omit: { photo: true },
+          include: { ratings: true, trip: true },
+        })
       : null;
 
   if (!hotel || hotel.tripId !== tripIdNum) {
@@ -27,15 +31,12 @@ export default async function EditHotelPage({
   const bookingUrl = hotel.ratings.find((r) => r.source === "BOOKING")?.url ?? "";
 
   return (
-    <div className="min-h-screen bg-zinc-50 px-6 py-12 font-sans dark:bg-black">
-      <main className="mx-auto max-w-xl">
-        <Link
-          href={`/trips/${hotel.tripId}`}
-          className="mb-4 inline-block text-sm text-zinc-600 hover:underline dark:text-zinc-400"
-        >
+    <div className="min-h-screen bg-page px-8 py-10 font-sans text-text-primary">
+      <main className="mx-auto max-w-[520px]">
+        <Link href={`/trips/${hotel.tripId}`} className="mb-4 inline-block text-[13px] text-text-secondary">
           ← Zurück zu {hotel.trip.name}
         </Link>
-        <h1 className="mb-6 text-2xl font-semibold text-black dark:text-zinc-50">Hotel bearbeiten</h1>
+        <h1 className="mb-6 text-2xl font-semibold text-text-primary">Hotel bearbeiten</h1>
         <HotelForm
           action={updateHotel.bind(null, hotel.id)}
           defaultValues={{
@@ -44,7 +45,9 @@ export default async function EditHotelPage({
             tripadvisorUrl,
             bookingUrl,
             notes: hotel.notes ?? "",
+            photoSource: hotel.photoSource ?? "",
           }}
+          photoUrl={hotel.photoType ? `/api/hotels/${hotel.id}/photo?v=${hotel.updatedAt.getTime()}` : undefined}
           submitLabel="Speichern"
         />
       </main>

@@ -18,25 +18,37 @@ enum ReviewSource {
   BOOKING
 }
 
+enum HotelPhotoSource {
+  UPLOAD
+  GOOGLE
+}
+
 model Trip {
-  id        Int      @id @default(autoincrement())
-  name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  hotels    Hotel[]
+  id             Int       @id @default(autoincrement())
+  name           String
+  startDate      DateTime? @db.Date
+  endDate        DateTime? @db.Date
+  coverPhoto     Bytes?
+  coverPhotoType String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  hotels         Hotel[]
 }
 
 model Hotel {
-  id        Int      @id @default(autoincrement())
-  tripId    Int
-  trip      Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  name      String
-  notes     String?
-  latitude  Float?
-  longitude Float?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  ratings   Rating[]
+  id          Int               @id @default(autoincrement())
+  tripId      Int
+  trip        Trip              @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  name        String
+  notes       String?
+  latitude    Float?
+  longitude   Float?
+  photo       Bytes?
+  photoType   String?
+  photoSource HotelPhotoSource?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  ratings     Rating[]
 }
 
 model Rating {

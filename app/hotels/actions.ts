@@ -10,11 +10,15 @@ import {
   isBookingUrl,
   isGoogleMapsUrl,
   isTripAdvisorUrl,
+  type PlaceRating,
 } from "@/lib/apify";
+import { downloadImage, readPhotoFromForm, type PhotoData } from "@/lib/upload";
 
 export interface HotelFormState {
   error?: string;
 }
+
+type PhotoSourceField = "" | "UPLOAD" | "GOOGLE";
 
 function readHotelForm(formData: FormData) {
   return {
@@ -26,12 +30,18 @@ function readHotelForm(formData: FormData) {
   };
 }
 
+function readPhotoSourceField(formData: FormData): PhotoSourceField {
+  const value = String(formData.get("photoSource") ?? "");
+  return value === "UPLOAD" || value === "GOOGLE" ? value : "";
+}
+
 export async function createHotel(
   tripId: number,
   _prevState: HotelFormState,
   formData: FormData
 ): Promise<HotelFormState> {
   const { name, googleMapsUrl, tripadvisorUrl, bookingUrl, notes } = readHotelForm(formData);
+  const photoSource = readPhotoSourceField(formData);
 
   if (!name) {
     return { error: "Bitte einen Hotelnamen angeben." };
@@ -52,6 +62,20 @@ export async function createHotel(
     bookingUrl ? fetchBookingRating(bookingUrl) : Promise.resolve(null),
   ]);
 
+  let photo: PhotoData | null = null;
+  if (photoSource === "UPLOAD") {
+    try {
+      photo = await readPhotoFromForm(formData, "photo");
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : "Foto konnte nicht verarbeitet werden." };
+    }
+    if (!photo) {
+      return { error: "Bitte eine Datei auswählen." };
+    }
+  } else if (photoSource === "GOOGLE" && googleRating?.imageUrl) {
+    photo = await downloadImage(googleRating.imageUrl);
+  }
+
   await prisma.hotel.create({
     data: {
       tripId,
@@ -59,6 +83,9 @@ export async function createHotel(
       notes: notes || null,
       latitude: googleRating?.latitude ?? null,
       longitude: googleRating?.longitude ?? null,
+      photo: photo?.bytes,
+      photoType: photo?.type,
+      photoSource: photoSource || null,
       ratings: {
         create: [
           {
@@ -103,6 +130,7 @@ export async function updateHotel(
   formData: FormData
 ): Promise<HotelFormState> {
   const { name, googleMapsUrl, tripadvisorUrl, bookingUrl, notes } = readHotelForm(formData);
+  const photoSource = readPhotoSourceField(formData);
 
   if (!name) {
     return { error: "Bitte einen Hotelnamen angeben." };
@@ -117,7 +145,11 @@ export async function updateHotel(
     return { error: "Bitte einen gültigen Booking.com-Link angeben." };
   }
 
-  const existing = await prisma.hotel.findUnique({ where: { id }, include: { ratings: true } });
+  const existing = await prisma.hotel.findUnique({
+    where: { id },
+    omit: { photo: true },
+    include: { ratings: true },
+  });
   if (!existing) {
     return { error: "Hotel wurde nicht gefunden." };
   }
@@ -136,6 +168,49 @@ export async function updateHotel(
     bookingChanged && bookingUrl ? fetchBookingRating(bookingUrl) : null,
   ]);
 
+  // Foto auflösen. Grundprinzip (analog zum Soft-Fail-Verhalten der Ratings): ein fehlgeschlagener
+  // Download überschreibt nie ein bereits vorhandenes Foto - nur eine explizite Nutzerentscheidung
+  // ("Kein Foto" wählen) löscht es.
+  let photoUpdate:
+    | {
+        photo: Uint8Array<ArrayBuffer> | null;
+        photoType: string | null;
+        photoSource: Exclude<PhotoSourceField, ""> | null;
+      }
+    | null = null;
+
+  if (photoSource === "") {
+    photoUpdate = { photo: null, photoType: null, photoSource: null };
+  } else if (photoSource === "UPLOAD") {
+    let uploaded: PhotoData | null;
+    try {
+      uploaded = await readPhotoFromForm(formData, "photo");
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : "Foto konnte nicht verarbeitet werden." };
+    }
+    if (uploaded) {
+      photoUpdate = { photo: uploaded.bytes, photoType: uploaded.type, photoSource: "UPLOAD" };
+    } else if (existing.photoSource !== "UPLOAD" || !existing.photoType) {
+      return { error: "Bitte eine Datei auswählen." };
+    }
+    // sonst: bereits ein Upload-Foto vorhanden und keine neue Datei gewählt -> unverändert lassen.
+  } else if (photoSource === "GOOGLE") {
+    const needsFreshFetch = googleChanged || existing.photoSource !== "GOOGLE";
+    if (needsFreshFetch) {
+      const googleForPhoto: PlaceRating | null = googleChanged
+        ? googleFetched
+        : await fetchGoogleMapsRating(googleMapsUrl);
+      if (googleForPhoto?.imageUrl) {
+        const downloaded = await downloadImage(googleForPhoto.imageUrl);
+        if (downloaded) {
+          photoUpdate = { photo: downloaded.bytes, photoType: downloaded.type, photoSource: "GOOGLE" };
+        }
+      }
+      // Download fehlgeschlagen oder kein imageUrl -> photoUpdate bleibt null, bestehendes Foto (falls
+      // vorhanden) bleibt unangetastet.
+    }
+  }
+
   await prisma.$transaction(async (tx) => {
     await tx.hotel.update({
       where: { id },
@@ -148,6 +223,7 @@ export async function updateHotel(
               longitude: googleFetched?.longitude ?? null,
             }
           : {}),
+        ...(photoUpdate ?? {}),
       },
     });
 
