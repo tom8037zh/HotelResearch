@@ -1,13 +1,21 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
-import { PencilIcon, PhotoIcon, TrashIcon } from "@/app/components/icons";
-import { RatingPill } from "@/app/components/RatingPill";
-import { ConfirmDeleteButton } from "@/app/components/ConfirmDeleteButton";
-import { deleteHotel } from "@/app/hotels/actions";
+import {
+  DndContext,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { GripIcon } from "@/app/components/icons";
+import type { HotelStatusValue } from "@/app/components/StatusBadge";
 import { HotelsMap } from "./HotelsMapLoader";
 import { HotelCard } from "./HotelCard";
+import { HotelTableRow, desktopGridCols } from "./HotelTableRow";
+import { reorderHotels } from "@/app/hotels/actions";
 
 export interface RatingInfo {
   url: string;
@@ -20,6 +28,8 @@ export interface HotelRow {
   name: string;
   website: string | null;
   notes: string | null;
+  status: HotelStatusValue | null;
+  sortOrder: number;
   latitude: number | null;
   longitude: number | null;
   /** `updatedAt` als Millisekunden-Timestamp, dient zugleich als "hat Foto?"-Flag und Cache-Buster
@@ -30,9 +40,10 @@ export interface HotelRow {
   booking: RatingInfo | null;
 }
 
-type SortColumn = "name" | "google" | "tripadvisor" | "booking";
+type SortColumn = "order" | "name" | "google" | "tripadvisor" | "booking";
 
 function sortHotels(rows: HotelRow[], col: SortColumn, desc: boolean): HotelRow[] {
+  if (col === "order") return [...rows].sort((a, b) => a.sortOrder - b.sortOrder);
   const dir = desc ? -1 : 1;
   return [...rows].sort((a, b) => {
     if (col === "name") return a.name.localeCompare(b.name) * dir;
@@ -50,9 +61,8 @@ function SortArrow({ active, desc }: { active: boolean; desc: boolean }) {
   return <span className="ml-1 text-[10px] text-text-muted">{desc ? "▼" : "▲"}</span>;
 }
 
-const gridCols = "grid-cols-[1.5fr_0.9fr_0.9fr_0.9fr_2.1fr_110px]";
-
 const SORT_COLUMN_LABELS: Record<SortColumn, string> = {
+  order: "Reihenfolge",
   name: "Hotel",
   google: "Google",
   tripadvisor: "TripAdvisor",
@@ -60,17 +70,44 @@ const SORT_COLUMN_LABELS: Record<SortColumn, string> = {
 };
 
 export function HotelsTable({ tripId, hotels }: { tripId: number; hotels: HotelRow[] }) {
-  const [sortColumn, setSortColumn] = useState<SortColumn>("name");
+  const [sortColumn, setSortColumn] = useState<SortColumn>("order");
   const [sortDesc, setSortDesc] = useState(false);
   const [selectedHotelId, setSelectedHotelId] = useState<number | null>(null);
 
-  const sorted = useMemo(() => sortHotels(hotels, sortColumn, sortDesc), [hotels, sortColumn, sortDesc]);
+  // Lokale, optimistisch aktualisierte Reihenfolge fürs Drag-and-Drop (sonst müsste man auf den
+  // Server-Roundtrip warten, bis eine Umsortierung sichtbar wird). Wird neu aus `hotels` aufgebaut,
+  // sobald sich die Menge der Hotel-IDs ändert (Hotel angelegt/gelöscht) - ansonsten bleibt eine gerade
+  // laufende manuelle Sortierung unangetastet. State-Anpassung passiert direkt im Render statt in einem
+  // Effect (React-empfohlenes Muster fürs Ableiten von State aus geänderten Props, vermeidet einen
+  // zusätzlichen Render-Durchlauf durch setState im Effect-Body).
+  const hotelIdsKey = useMemo(() => hotels.map((h) => h.id).sort((a, b) => a - b).join(","), [hotels]);
+  const [orderedIds, setOrderedIds] = useState<number[]>(() =>
+    [...hotels].sort((a, b) => a.sortOrder - b.sortOrder).map((h) => h.id)
+  );
+  const [syncedHotelIdsKey, setSyncedHotelIdsKey] = useState(hotelIdsKey);
+  if (hotelIdsKey !== syncedHotelIdsKey) {
+    setSyncedHotelIdsKey(hotelIdsKey);
+    setOrderedIds([...hotels].sort((a, b) => a.sortOrder - b.sortOrder).map((h) => h.id));
+  }
+
+  const hotelsById = useMemo(() => new Map(hotels.map((h) => [h.id, h])), [hotels]);
+
+  const sorted = useMemo(() => {
+    if (sortColumn === "order") {
+      return orderedIds.map((id) => hotelsById.get(id)).filter((h): h is HotelRow => h !== undefined);
+    }
+    return sortHotels(hotels, sortColumn, sortDesc);
+  }, [hotels, hotelsById, orderedIds, sortColumn, sortDesc]);
 
   const hotelsWithCoords = hotels
     .filter((h) => h.latitude !== null && h.longitude !== null)
     .map((h) => ({ id: h.id, name: h.name, latitude: h.latitude as number, longitude: h.longitude as number }));
 
   function handleSort(col: SortColumn) {
+    if (col === "order") {
+      setSortColumn("order");
+      return;
+    }
     if (sortColumn === col) {
       setSortDesc((d) => !d);
     } else {
@@ -83,14 +120,32 @@ export function HotelsTable({ tripId, hotels }: { tripId: number; hotels: HotelR
     setSelectedHotelId((current) => (current === id ? null : id));
   }
 
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = orderedIds.indexOf(active.id as number);
+    const newIndex = orderedIds.indexOf(over.id as number);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const newOrder = arrayMove(orderedIds, oldIndex, newIndex);
+    setOrderedIds(newOrder);
+    void reorderHotels(tripId, newOrder);
+  }
+
   if (hotels.length === 0) {
     return <p className="text-text-secondary">Noch keine Hotels für diese Reise angelegt.</p>;
   }
 
+  const isOrderMode = sortColumn === "order";
+  const sortedIds = sorted.map((h) => h.id);
+
   return (
     <>
-      {/* Mobile (< md): Karten-Liste statt breitem Grid, teilt sich sortColumn/sortDesc/selectedHotelId
-          mit der Desktop-Tabelle unten. */}
+      {/* Mobile (< md): Karten-Liste statt breitem Grid, teilt sich Sortier-/Auswahl-State mit der
+          Desktop-Tabelle unten. */}
       <div className="md:hidden">
         <div className="mb-3 flex items-center gap-2">
           <select
@@ -104,34 +159,48 @@ export function HotelsTable({ tripId, hotels }: { tripId: number; hotels: HotelR
               </option>
             ))}
           </select>
-          <button
-            onClick={() => setSortDesc((d) => !d)}
-            title={sortDesc ? "Absteigend" : "Aufsteigend"}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-card-border bg-white text-text-secondary"
-          >
-            {sortDesc ? "▼" : "▲"}
-          </button>
+          {!isOrderMode && (
+            <button
+              onClick={() => setSortDesc((d) => !d)}
+              title={sortDesc ? "Absteigend" : "Aufsteigend"}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-card-border bg-white text-text-secondary"
+            >
+              {sortDesc ? "▼" : "▲"}
+            </button>
+          )}
         </div>
-        <div className="flex flex-col gap-3">
-          {sorted.map((hotel) => (
-            <HotelCard
-              key={hotel.id}
-              tripId={tripId}
-              hotel={hotel}
-              isSelected={selectedHotelId === hotel.id}
-              onSelect={toggleSelect}
-            />
-          ))}
-        </div>
+        <DndContext id="hotels-mobile" sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={sortedIds} strategy={verticalListSortingStrategy}>
+            <div className="flex flex-col gap-3">
+              {sorted.map((hotel) => (
+                <HotelCard
+                  key={hotel.id}
+                  tripId={tripId}
+                  hotel={hotel}
+                  isSelected={selectedHotelId === hotel.id}
+                  isOrderMode={isOrderMode}
+                  onSelect={toggleSelect}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
       </div>
 
       <div className="hidden overflow-hidden rounded-[14px] border border-card-border bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)] md:block">
         <div className="overflow-x-auto">
-          <div className="min-w-[920px] text-sm">
-            <div className={`grid ${gridCols} items-center bg-[#fafafa]`}>
+          <div className="min-w-[960px] text-sm">
+            <div className={`grid ${desktopGridCols} items-center bg-[#fafafa]`}>
+              <button
+                onClick={() => handleSort("order")}
+                title="Nach Reihenfolge sortieren"
+                className="flex items-center justify-center py-3.5 pl-5"
+              >
+                <GripIcon size={14} className={isOrderMode ? "" : "opacity-40"} />
+              </button>
               <button
                 onClick={() => handleSort("name")}
-                className="flex items-center py-3.5 pr-3 pl-5 text-left font-medium text-text-secondary select-none"
+                className="flex items-center py-3.5 pr-3 text-left font-medium text-text-secondary select-none"
               >
                 Hotel <SortArrow active={sortColumn === "name"} desc={sortDesc} />
               </button>
@@ -157,82 +226,20 @@ export function HotelsTable({ tripId, hotels }: { tripId: number; hotels: HotelR
               <div className="py-3.5 pr-5 pl-3 text-right font-medium text-text-secondary">Aktionen</div>
             </div>
 
-            {sorted.map((hotel) => {
-              const isSelected = selectedHotelId === hotel.id;
-              return (
-                <div
-                  key={hotel.id}
-                  onClick={() => toggleSelect(hotel.id)}
-                  className={`grid ${gridCols} cursor-pointer items-center border-t border-row-divider ${isSelected ? "bg-row-divider" : "bg-white"}`}
-                >
-                  <div className="flex items-center gap-2.5 py-4 pr-3 pl-5">
-                    <div className="flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-row-divider">
-                      {hotel.photoVersion !== null ? (
-                        // eslint-disable-next-line @next/next/no-img-element -- dynamische eigene API-Route, kein next/image nötig
-                        <img
-                          src={`/api/hotels/${hotel.id}/photo?v=${hotel.photoVersion}`}
-                          alt=""
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <PhotoIcon size={20} />
-                      )}
-                    </div>
-                    {hotel.website ? (
-                      <a
-                        href={hotel.website}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        className="font-medium text-text-primary hover:underline"
-                      >
-                        {hotel.name}
-                      </a>
-                    ) : (
-                      <span className="font-medium text-text-primary">{hotel.name}</span>
-                    )}
-                  </div>
-                  <div className="px-3 py-4">
-                    <RatingPill
-                      rating={hotel.google?.rating ?? null}
-                      reviewsCount={hotel.google?.reviewsCount ?? null}
-                      scale={5}
-                      url={hotel.google?.url}
-                    />
-                  </div>
-                  <div className="px-3 py-4">
-                    <RatingPill
-                      rating={hotel.tripadvisor?.rating ?? null}
-                      reviewsCount={hotel.tripadvisor?.reviewsCount ?? null}
-                      scale={5}
-                      url={hotel.tripadvisor?.url}
-                    />
-                  </div>
-                  <div className="px-3 py-4">
-                    <RatingPill
-                      rating={hotel.booking?.rating ?? null}
-                      reviewsCount={hotel.booking?.reviewsCount ?? null}
-                      scale={10}
-                      url={hotel.booking?.url}
-                    />
-                  </div>
-                  <div className="truncate px-3 py-4 text-text-secondary">{hotel.notes || "—"}</div>
-                  <div className="flex items-center justify-end gap-2.5 py-4 pr-5 pl-3" onClick={(e) => e.stopPropagation()}>
-                    <Link href={`/trips/${tripId}/hotels/${hotel.id}/edit`} title="Bearbeiten">
-                      <PencilIcon size={16} />
-                    </Link>
-                    <ConfirmDeleteButton
-                      action={deleteHotel.bind(null, hotel.id)}
-                      confirmMessage={`"${hotel.name}" wirklich löschen?`}
-                      className="flex items-center"
-                      title="Löschen"
-                    >
-                      <TrashIcon size={16} />
-                    </ConfirmDeleteButton>
-                  </div>
-                </div>
-              );
-            })}
+            <DndContext id="hotels-desktop" sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={sortedIds} strategy={verticalListSortingStrategy}>
+                {sorted.map((hotel) => (
+                  <HotelTableRow
+                    key={hotel.id}
+                    tripId={tripId}
+                    hotel={hotel}
+                    isSelected={selectedHotelId === hotel.id}
+                    isOrderMode={isOrderMode}
+                    onSelect={toggleSelect}
+                  />
+                ))}
+              </SortableContext>
+            </DndContext>
           </div>
         </div>
       </div>

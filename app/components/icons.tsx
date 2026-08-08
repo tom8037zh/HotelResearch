@@ -68,6 +68,20 @@ export function ChevronRightIcon({ size = 13, className }: IconProps) {
   );
 }
 
+/** Drag-Handle für die manuelle Hotel-Reihenfolge (sechs Punkte, klassisches Grip-Symbol). */
+export function GripIcon({ size = 16, className }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="#a1a1aa" className={className} aria-hidden="true">
+      <circle cx="9" cy="6" r="1.5" />
+      <circle cx="15" cy="6" r="1.5" />
+      <circle cx="9" cy="12" r="1.5" />
+      <circle cx="15" cy="12" r="1.5" />
+      <circle cx="9" cy="18" r="1.5" />
+      <circle cx="15" cy="18" r="1.5" />
+    </svg>
+  );
+}
+
 /** Dezenter Foto-Platzhalter-Icon für leere Foto-Slots (kein Initialen-Avatar, s. README). */
 export function PhotoIcon({ size = 22, className }: IconProps) {
   return (

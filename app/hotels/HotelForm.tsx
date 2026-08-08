@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import type { HotelFormState } from "./actions";
 import { PhotoSourceField, type PhotoSourceValue } from "./PhotoSourceField";
+import type { HotelStatusValue } from "@/app/components/StatusBadge";
 
 interface HotelFormProps {
   action: (prevState: HotelFormState, formData: FormData) => Promise<HotelFormState>;
@@ -13,6 +14,7 @@ interface HotelFormProps {
     tripadvisorUrl: string;
     bookingUrl: string;
     notes: string;
+    status?: HotelStatusValue | "";
     photoSource?: PhotoSourceValue;
   };
   /** Nur gesetzt, wenn das bestehende Hotel bereits ein Foto hat (Edit-Fall). */
@@ -110,6 +112,23 @@ export function HotelForm({ action, defaultValues, photoUrl, submitLabel }: Hote
           defaultValue={defaultValues?.notes}
           className={`${inputClasses} resize-y`}
         />
+      </div>
+
+      <div className="mb-6 flex flex-col gap-1.5">
+        <label className="text-[13px] font-medium text-text-primary" htmlFor="status">
+          Status <span className="font-normal text-text-muted">(optional)</span>
+        </label>
+        <select
+          id="status"
+          name="status"
+          defaultValue={defaultValues?.status ?? ""}
+          className={inputClasses}
+        >
+          <option value="">Kein Status</option>
+          <option value="PRIORITIZED">Priorisiert</option>
+          <option value="BOOKED">Gebucht</option>
+          <option value="DISCARDED">Verworfen</option>
+        </select>
       </div>
 
       <PhotoSourceField defaultValue={defaultValues?.photoSource ?? ""} photoUrl={photoUrl} />

@@ -19,6 +19,7 @@ export interface HotelFormState {
 }
 
 type PhotoSourceField = "" | "UPLOAD" | "GOOGLE";
+type HotelStatusField = "" | "PRIORITIZED" | "BOOKED" | "DISCARDED";
 
 function readHotelForm(formData: FormData) {
   return {
@@ -29,6 +30,11 @@ function readHotelForm(formData: FormData) {
     bookingUrl: String(formData.get("bookingUrl") ?? "").trim(),
     notes: String(formData.get("notes") ?? "").trim(),
   };
+}
+
+function readStatusField(formData: FormData): HotelStatusField {
+  const value = String(formData.get("status") ?? "");
+  return value === "PRIORITIZED" || value === "BOOKED" || value === "DISCARDED" ? value : "";
 }
 
 function isValidUrl(value: string): boolean {
@@ -52,6 +58,7 @@ export async function createHotel(
 ): Promise<HotelFormState> {
   const { name, website, googleMapsUrl, tripadvisorUrl, bookingUrl, notes } = readHotelForm(formData);
   const photoSource = readPhotoSourceField(formData);
+  const status = readStatusField(formData);
 
   if (!name) {
     return { error: "Bitte einen Hotelnamen angeben." };
@@ -68,6 +75,10 @@ export async function createHotel(
   if (bookingUrl && !isBookingUrl(bookingUrl)) {
     return { error: "Bitte einen gültigen Booking.com-Link angeben." };
   }
+
+  // Neues Hotel wird ans Ende der (per Drag-and-Drop editierbaren) Reihenfolge angehängt.
+  const { _max } = await prisma.hotel.aggregate({ where: { tripId }, _max: { sortOrder: true } });
+  const sortOrder = (_max.sortOrder ?? -1) + 1;
 
   const [googleRating, tripadvisorRating, bookingRating] = await Promise.all([
     fetchGoogleMapsRating(googleMapsUrl),
@@ -95,6 +106,8 @@ export async function createHotel(
       name,
       website: website || null,
       notes: notes || null,
+      status: status || null,
+      sortOrder,
       latitude: googleRating?.latitude ?? null,
       longitude: googleRating?.longitude ?? null,
       photo: photo?.bytes,
@@ -145,6 +158,7 @@ export async function updateHotel(
 ): Promise<HotelFormState> {
   const { name, website, googleMapsUrl, tripadvisorUrl, bookingUrl, notes } = readHotelForm(formData);
   const photoSource = readPhotoSourceField(formData);
+  const status = readStatusField(formData);
 
   if (!name) {
     return { error: "Bitte einen Hotelnamen angeben." };
@@ -235,6 +249,7 @@ export async function updateHotel(
         name,
         website: website || null,
         notes: notes || null,
+        status: status || null,
         ...(googleChanged
           ? {
               latitude: googleFetched?.latitude ?? null,
@@ -325,4 +340,24 @@ export async function deleteHotel(id: number): Promise<void> {
 
   revalidatePath("/");
   revalidatePath(`/trips/${existing.tripId}`);
+}
+
+/**
+ * Speichert eine per Drag-and-Drop erstellte manuelle Hotel-Reihenfolge. Wird direkt aus einer Client-
+ * Komponente aufgerufen (kein Formular). `orderedIds` muss exakt die Menge der Hotel-IDs der Reise sein -
+ * bei Abweichung (z.B. veralteter Client-Zustand) wird still nichts geändert statt teilweise zu schreiben.
+ */
+export async function reorderHotels(tripId: number, orderedIds: number[]): Promise<void> {
+  const existing = await prisma.hotel.findMany({ where: { tripId }, select: { id: true } });
+  const existingIds = new Set(existing.map((h) => h.id));
+
+  const isValidPermutation =
+    orderedIds.length === existingIds.size && orderedIds.every((id) => existingIds.has(id));
+  if (!isValidPermutation) return;
+
+  await prisma.$transaction(
+    orderedIds.map((id, index) => prisma.hotel.update({ where: { id }, data: { sortOrder: index } }))
+  );
+
+  revalidatePath(`/trips/${tripId}`);
 }

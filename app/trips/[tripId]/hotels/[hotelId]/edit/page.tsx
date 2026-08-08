@@ -46,6 +46,7 @@ export default async function EditHotelPage({
             tripadvisorUrl,
             bookingUrl,
             notes: hotel.notes ?? "",
+            status: hotel.status ?? "",
             photoSource: hotel.photoSource ?? "",
           }}
           photoUrl={hotel.photoType ? `/api/hotels/${hotel.id}/photo?v=${hotel.updatedAt.getTime()}` : undefined}

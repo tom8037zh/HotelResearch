@@ -1,8 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { PencilIcon, PhotoIcon, TrashIcon } from "@/app/components/icons";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { GripIcon, PencilIcon, PhotoIcon, TrashIcon } from "@/app/components/icons";
 import { RatingPill } from "@/app/components/RatingPill";
+import { StatusBadge } from "@/app/components/StatusBadge";
 import { ConfirmDeleteButton } from "@/app/components/ConfirmDeleteButton";
 import { deleteHotel } from "@/app/hotels/actions";
 import type { HotelRow } from "./HotelsTable";
@@ -16,19 +19,47 @@ export function HotelCard({
   tripId,
   hotel,
   isSelected,
+  isOrderMode,
   onSelect,
 }: {
   tripId: number;
   hotel: HotelRow;
   isSelected: boolean;
+  isOrderMode: boolean;
   onSelect: (id: number) => void;
 }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: hotel.id,
+    disabled: !isOrderMode,
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 10 : undefined,
+  };
+
   return (
     <div
+      ref={setNodeRef}
+      style={style}
       onClick={() => onSelect(hotel.id)}
-      className={`cursor-pointer overflow-hidden rounded-[14px] border border-card-border ${isSelected ? "bg-row-divider" : "bg-white"}`}
+      className={`cursor-pointer overflow-hidden rounded-[14px] border border-card-border ${
+        isSelected ? "bg-row-divider" : "bg-white"
+      } ${isDragging ? "opacity-70" : ""}`}
     >
       <div className="flex items-start gap-3 p-4">
+        <div
+          {...attributes}
+          {...listeners}
+          onClick={(e) => e.stopPropagation()}
+          className={`flex shrink-0 items-center self-stretch ${
+            isOrderMode ? "cursor-grab touch-none active:cursor-grabbing" : "cursor-not-allowed opacity-30"
+          }`}
+        >
+          <GripIcon size={16} />
+        </div>
+
         <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-row-divider">
           {hotel.photoVersion !== null ? (
             // eslint-disable-next-line @next/next/no-img-element -- dynamische eigene API-Route, kein next/image nötig
@@ -58,6 +89,7 @@ export function HotelCard({
           )}
 
           <div className="mt-2 flex flex-wrap gap-2">
+            {hotel.status && <StatusBadge status={hotel.status} />}
             <RatingPill
               rating={hotel.google?.rating ?? null}
               reviewsCount={hotel.google?.reviewsCount ?? null}

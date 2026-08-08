@@ -23,6 +23,12 @@ enum HotelPhotoSource {
   GOOGLE
 }
 
+enum HotelStatus {
+  PRIORITIZED
+  BOOKED
+  DISCARDED
+}
+
 model Trip {
   id             Int       @id @default(autoincrement())
   name           String
@@ -47,6 +53,8 @@ model Hotel {
   photo       Bytes?
   photoType   String?
   photoSource HotelPhotoSource?
+  status      HotelStatus?
+  sortOrder   Int
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
   ratings     Rating[]
