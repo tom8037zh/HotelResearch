@@ -59,6 +59,21 @@ function MapResizeHandler() {
   return null;
 }
 
+// Klick auf ein Hotel (Tabelle/Karten-Liste oder Marker) setzt `selectedHotelId` - die Karte soll
+// dann sanft dorthin zentrieren, ohne den aktuellen Zoom zu verändern (kein flyTo mit Zoom-Sprung).
+function CenterOnSelected({ hotels, selectedHotelId }: { hotels: HotelMarker[]; selectedHotelId: number | null }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (selectedHotelId === null) return;
+    const hotel = hotels.find((h) => h.id === selectedHotelId);
+    if (!hotel) return;
+    map.panTo([hotel.latitude, hotel.longitude], { animate: true });
+  }, [selectedHotelId, hotels, map]);
+
+  return null;
+}
+
 export function HotelsMap({
   hotels,
   selectedHotelId = null,
@@ -77,6 +92,7 @@ export function HotelsMap({
       className="h-full min-h-[200px] w-full rounded-[10px]"
     >
       <MapResizeHandler />
+      <CenterOnSelected hotels={hotels} selectedHotelId={selectedHotelId} />
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>-Mitwirkende'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
