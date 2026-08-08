@@ -23,6 +23,7 @@ export default async function TripPage({ params }: { params: Promise<{ tripId: s
             select: {
               id: true,
               name: true,
+              website: true,
               notes: true,
               latitude: true,
               longitude: true,
@@ -46,6 +47,7 @@ export default async function TripPage({ params }: { params: Promise<{ tripId: s
     return {
       id: hotel.id,
       name: hotel.name,
+      website: hotel.website,
       notes: hotel.notes,
       latitude: hotel.latitude,
       longitude: hotel.longitude,
@@ -59,12 +61,12 @@ export default async function TripPage({ params }: { params: Promise<{ tripId: s
   });
 
   return (
-    <div className="min-h-screen bg-page px-8 py-10 font-sans text-text-primary">
+    <div className="min-h-screen bg-page px-4 py-6 font-sans text-text-primary md:px-8 md:py-10">
       <main className="mx-auto max-w-[1240px]">
         <Link href="/" className="mb-4 inline-block text-[13px] text-text-secondary">
           ← Alle Reisen
         </Link>
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="mb-1 text-2xl font-semibold text-text-primary">{trip.name}</h1>
             <p className="text-[13px] text-text-secondary">
@@ -73,7 +75,7 @@ export default async function TripPage({ params }: { params: Promise<{ tripId: s
           </div>
           <Link
             href={`/trips/${trip.id}/hotels/new`}
-            className="rounded-lg bg-text-primary px-[18px] py-2.5 text-sm font-medium text-white"
+            className="rounded-lg bg-text-primary px-[18px] py-2.5 text-center text-sm font-medium text-white"
           >
             + Neues Hotel
           </Link>

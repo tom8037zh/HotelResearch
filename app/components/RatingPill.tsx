@@ -2,6 +2,9 @@ export interface RatingPillProps {
   rating: number | null;
   reviewsCount: number | null;
   scale: 5 | 10;
+  /** Link zur Quelle (Google Maps/TripAdvisor/Booking.com) - falls gesetzt, wird die Pille klickbar,
+   *  auch wenn `rating` null ist (z.B. TripAdvisor-403-Soft-Fail, URL trotzdem manuell prüfbar). */
+  url?: string;
 }
 
 function tierClasses(rating: number | null, scale: 5 | 10): string {
@@ -21,7 +24,7 @@ function tierClasses(rating: number | null, scale: 5 | 10): string {
 }
 
 /** Rating-Badge wie im Redesign: gefärbte Pille nach Bewertungs-Tier, s. README "Design Tokens". */
-export function RatingPill({ rating, reviewsCount, scale }: RatingPillProps) {
+export function RatingPill({ rating, reviewsCount, scale, url }: RatingPillProps) {
   const text =
     rating === null
       ? "Kein Rating"
@@ -29,11 +32,21 @@ export function RatingPill({ rating, reviewsCount, scale }: RatingPillProps) {
         ? `${rating}/10 (${reviewsCount ?? 0})`
         : `★ ${rating} (${reviewsCount ?? 0})`;
 
-  return (
-    <span
-      className={`inline-block whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium ${tierClasses(rating, scale)}`}
-    >
-      {text}
-    </span>
-  );
+  const className = `inline-block whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium ${tierClasses(rating, scale)}`;
+
+  if (url) {
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(e) => e.stopPropagation()}
+        className={`${className} hover:opacity-80`}
+      >
+        {text}
+      </a>
+    );
+  }
+
+  return <span className={className}>{text}</span>;
 }

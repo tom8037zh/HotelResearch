@@ -23,13 +23,13 @@ export default async function Home() {
   });
 
   return (
-    <div className="min-h-screen bg-page px-8 py-10 font-sans text-text-primary">
+    <div className="min-h-screen bg-page px-4 py-6 font-sans text-text-primary md:px-8 md:py-10">
       <main className="mx-auto max-w-[1240px]">
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="text-2xl font-semibold text-text-primary">Reisen</h1>
           <Link
             href="/trips/new"
-            className="rounded-lg bg-text-primary px-[18px] py-2.5 text-sm font-medium text-white"
+            className="rounded-lg bg-text-primary px-[18px] py-2.5 text-center text-sm font-medium text-white"
           >
             + Neue Reise
           </Link>

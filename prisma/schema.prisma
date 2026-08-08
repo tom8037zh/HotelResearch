@@ -40,6 +40,7 @@ model Hotel {
   tripId      Int
   trip        Trip              @relation(fields: [tripId], references: [id], onDelete: Cascade)
   name        String
+  website     String?
   notes       String?
   latitude    Float?
   longitude   Float?

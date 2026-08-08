@@ -14,7 +14,7 @@ export default async function NewHotelPage({ params }: { params: Promise<{ tripI
   }
 
   return (
-    <div className="min-h-screen bg-page px-8 py-10 font-sans text-text-primary">
+    <div className="min-h-screen bg-page px-4 py-6 font-sans text-text-primary md:px-8 md:py-10">
       <main className="mx-auto max-w-[520px]">
         <Link href={`/trips/${trip.id}`} className="mb-4 inline-block text-[13px] text-text-secondary">
           ← Zurück zu {trip.name}

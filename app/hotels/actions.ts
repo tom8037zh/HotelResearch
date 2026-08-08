@@ -23,11 +23,21 @@ type PhotoSourceField = "" | "UPLOAD" | "GOOGLE";
 function readHotelForm(formData: FormData) {
   return {
     name: String(formData.get("name") ?? "").trim(),
+    website: String(formData.get("website") ?? "").trim(),
     googleMapsUrl: String(formData.get("googleMapsUrl") ?? "").trim(),
     tripadvisorUrl: String(formData.get("tripadvisorUrl") ?? "").trim(),
     bookingUrl: String(formData.get("bookingUrl") ?? "").trim(),
     notes: String(formData.get("notes") ?? "").trim(),
   };
+}
+
+function isValidUrl(value: string): boolean {
+  try {
+    new URL(value);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function readPhotoSourceField(formData: FormData): PhotoSourceField {
@@ -40,11 +50,14 @@ export async function createHotel(
   _prevState: HotelFormState,
   formData: FormData
 ): Promise<HotelFormState> {
-  const { name, googleMapsUrl, tripadvisorUrl, bookingUrl, notes } = readHotelForm(formData);
+  const { name, website, googleMapsUrl, tripadvisorUrl, bookingUrl, notes } = readHotelForm(formData);
   const photoSource = readPhotoSourceField(formData);
 
   if (!name) {
     return { error: "Bitte einen Hotelnamen angeben." };
+  }
+  if (website && !isValidUrl(website)) {
+    return { error: "Bitte eine gültige Website-URL angeben." };
   }
   if (!googleMapsUrl || !isGoogleMapsUrl(googleMapsUrl)) {
     return { error: "Bitte einen gültigen Google-Maps-Link angeben." };
@@ -80,6 +93,7 @@ export async function createHotel(
     data: {
       tripId,
       name,
+      website: website || null,
       notes: notes || null,
       latitude: googleRating?.latitude ?? null,
       longitude: googleRating?.longitude ?? null,
@@ -129,11 +143,14 @@ export async function updateHotel(
   _prevState: HotelFormState,
   formData: FormData
 ): Promise<HotelFormState> {
-  const { name, googleMapsUrl, tripadvisorUrl, bookingUrl, notes } = readHotelForm(formData);
+  const { name, website, googleMapsUrl, tripadvisorUrl, bookingUrl, notes } = readHotelForm(formData);
   const photoSource = readPhotoSourceField(formData);
 
   if (!name) {
     return { error: "Bitte einen Hotelnamen angeben." };
+  }
+  if (website && !isValidUrl(website)) {
+    return { error: "Bitte eine gültige Website-URL angeben." };
   }
   if (!googleMapsUrl || !isGoogleMapsUrl(googleMapsUrl)) {
     return { error: "Bitte einen gültigen Google-Maps-Link angeben." };
@@ -216,6 +233,7 @@ export async function updateHotel(
       where: { id },
       data: {
         name,
+        website: website || null,
         notes: notes || null,
         ...(googleChanged
           ? {

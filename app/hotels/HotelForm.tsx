@@ -8,6 +8,7 @@ interface HotelFormProps {
   action: (prevState: HotelFormState, formData: FormData) => Promise<HotelFormState>;
   defaultValues?: {
     name: string;
+    website: string;
     googleMapsUrl: string;
     tripadvisorUrl: string;
     bookingUrl: string;
@@ -37,6 +38,20 @@ export function HotelForm({ action, defaultValues, photoUrl, submitLabel }: Hote
           required
           defaultValue={defaultValues?.name}
           placeholder="Hotelname"
+          className={inputClasses}
+        />
+      </div>
+
+      <div className="mb-5 flex flex-col gap-1.5">
+        <label className="text-[13px] font-medium text-text-primary" htmlFor="website">
+          Website <span className="font-normal text-text-muted">(optional)</span>
+        </label>
+        <input
+          id="website"
+          name="website"
+          type="url"
+          defaultValue={defaultValues?.website}
+          placeholder="https://www.hotelname.com"
           className={inputClasses}
         />
       </div>

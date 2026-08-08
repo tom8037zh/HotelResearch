@@ -31,7 +31,7 @@ export default async function EditHotelPage({
   const bookingUrl = hotel.ratings.find((r) => r.source === "BOOKING")?.url ?? "";
 
   return (
-    <div className="min-h-screen bg-page px-8 py-10 font-sans text-text-primary">
+    <div className="min-h-screen bg-page px-4 py-6 font-sans text-text-primary md:px-8 md:py-10">
       <main className="mx-auto max-w-[520px]">
         <Link href={`/trips/${hotel.tripId}`} className="mb-4 inline-block text-[13px] text-text-secondary">
           ← Zurück zu {hotel.trip.name}
@@ -41,6 +41,7 @@ export default async function EditHotelPage({
           action={updateHotel.bind(null, hotel.id)}
           defaultValues={{
             name: hotel.name,
+            website: hotel.website ?? "",
             googleMapsUrl,
             tripadvisorUrl,
             bookingUrl,
